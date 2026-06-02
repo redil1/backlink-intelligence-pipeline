@@ -18,21 +18,22 @@ Docker Compose is the recommended end-to-end mode because it starts SearXNG, Cra
 
 1. Create a new Coolify resource from the GitHub repository.
 2. Select Docker Compose deployment.
-3. Use `docker-compose.yml` from the repository root.
-4. Expose only the `pipeline-ui` service on port `3004`.
-5. Add persistent storage for:
+3. Use `docker-compose.coolify.yml` from the repository root.
+4. Expose only the `pipeline-ui` service on port `3000`.
+5. Keep `searxng`, `crawl4ai`, `redis`, and `mcp-server` internal.
+6. The compose file already defines persistent named volumes for:
 
 ```text
-./data/backlink-runs
-./logs
+backlink_runs
+logs_data
+redis_data
 ```
 
-6. Set environment variables:
+7. Set environment variables:
 
 ```env
 SEARXNG_SECRET=replace-with-a-long-random-secret
 PROXY_URL=
-PIPELINE_UI_PORT=3004
 ```
 
 `PROXY_URL` is optional for small tests. For high-volume discovery, use a reliable rotating proxy or paid search data source.
@@ -42,7 +43,7 @@ PIPELINE_UI_PORT=3004
 Coolify should run the compose stack automatically. For manual VPS deployment:
 
 ```bash
-docker compose up -d --build pipeline-ui
+docker compose -f docker-compose.coolify.yml up -d --build pipeline-ui
 ```
 
 Then open:

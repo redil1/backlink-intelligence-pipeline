@@ -1,0 +1,108 @@
+# Coolify-first compose file.
+#
+# Use this file when creating a Coolify Docker Compose resource.
+# Expose the `pipeline-ui` service on port 3000 in Coolify.
+
+services:
+  searxng:
+    image: searxng/searxng:latest
+    environment:
+      - SEARXNG_BASE_URL=${SEARXNG_BASE_URL:-http://localhost:8080/}
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-replace-with-a-long-random-secret}
+    volumes:
+      - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    expose:
+      - "8080"
+    restart: unless-stopped
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:alpine
+    command: redis-server --save 30 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    expose:
+      - "6379"
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  crawl4ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawl4ai
+    environment:
+      - PROXY_URL=${PROXY_URL}
+      - CRAWL4AI_LOG_LEVEL=INFO
+    expose:
+      - "8000"
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - logs_data:/app/logs
+
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["node", "fixed-mcp-server.js"]
+    stdin_open: true
+    environment:
+      - SEARXNG_URL=http://searxng:8080
+      - CRAWL4AI_URL=http://crawl4ai:8000
+      - PROXY_URL=${PROXY_URL}
+      - LOG_LEVEL=info
+      - MCP_MODE=true
+    expose:
+      - "3003"
+    depends_on:
+      searxng:
+        condition: service_healthy
+      crawl4ai:
+        condition: service_started
+    volumes:
+      - logs_data:/app/logs
+    restart: unless-stopped
+
+  pipeline-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline-ui
+    environment:
+      - PIPELINE_UI_PORT=3000
+      - PIPELINE_OUTPUT_DIR=/app/data/backlink-runs
+      - SEARXNG_URL=http://searxng:8080
+      - CRAWL4AI_URL=http://crawl4ai:8000
+      - LOG_LEVEL=info
+    expose:
+      - "3000"
+    depends_on:
+      searxng:
+        condition: service_healthy
+      crawl4ai:
+        condition: service_started
+    volumes:
+      - backlink_runs:/app/data/backlink-runs
+      - logs_data:/app/logs
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  backlink_runs:
+  logs_data:

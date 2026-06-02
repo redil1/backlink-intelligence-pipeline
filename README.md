@@ -76,6 +76,14 @@ For Docker:
 docker compose up -d --build pipeline-ui
 ```
 
+For Coolify end-to-end deployment, use the compose file:
+
+```text
+docker-compose.coolify.yml
+```
+
+Expose the `pipeline-ui` service on port `3000`.
+
 See [BACKLINK_PIPELINE.md](BACKLINK_PIPELINE.md) for the full architecture, scaling guide, UI workflow, Docker workflow, resume behavior, authority CSV import, and Browser Harness verification flow. See [COOLIFY_DEPLOY.md](COOLIFY_DEPLOY.md) for VPS/Coolify deployment, including the recommended Docker Compose mode and the fallback Dockerfile application mode.
 
 ## 🚀 **Quick Start**
