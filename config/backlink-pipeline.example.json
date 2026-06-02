@@ -1,0 +1,69 @@
+{
+  "niche": "cybersecurity",
+  "targetCandidates": 10000,
+  "outputDir": "data/backlink-runs",
+  "searxngUrl": "http://localhost:8081",
+  "crawl4aiUrl": "http://localhost:8001",
+  "search": {
+    "pagesPerQuery": 8,
+    "concurrency": 2,
+    "maxQueries": 1000,
+    "language": "en",
+    "safesearch": 0,
+    "includeGenericQueries": true,
+    "seedTerms": [
+      "security",
+      "cloud security",
+      "privacy",
+      "compliance",
+      "risk management",
+      "software",
+      "startup",
+      "technology",
+      "business"
+    ],
+    "locations": [
+      "United States",
+      "United Kingdom",
+      "Canada",
+      "Australia",
+      "India",
+      "Europe"
+    ]
+  },
+  "scrape": {
+    "enabled": true,
+    "limit": 10000,
+    "concurrency": 4,
+    "timeoutMs": 30000,
+    "retries": 1,
+    "formats": ["markdown", "html", "links"],
+    "minCandidateScore": 12
+  },
+  "browserVerification": {
+    "enabled": false,
+    "command": "browser-harness",
+    "buName": "backlink-pipeline",
+    "autoStartLocalChromium": true,
+    "localChromiumCommand": "browser-harness-local-chromium",
+    "cdpUrl": "http://127.0.0.1:9222",
+    "limit": 100,
+    "concurrency": 1,
+    "timeoutMs": 45000,
+    "minOpportunityScore": 65
+  },
+  "scoring": {
+    "minExportScore": 35,
+    "weights": {
+      "topicalRelevance": 0.2,
+      "authority": 0.2,
+      "backlinkEligibility": 0.2,
+      "technicalValue": 0.15,
+      "editorialQuality": 0.15,
+      "lowRisk": 0.1
+    }
+  },
+  "authority": {
+    "provider": "fallback"
+  }
+}

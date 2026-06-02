@@ -1,0 +1,123 @@
+# SearXNG + Crawl4AI MCP - Truly Self-Hosted Search & Scrape Stack
+
+services:
+  # SearXNG - Open source metasearch engine
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    ports:
+      - "8081:8080"
+    environment:
+      - SEARXNG_BASE_URL=http://localhost:8081/
+      - SEARXNG_SECRET=${SEARXNG_SECRET:-replace-with-a-long-random-secret}
+    volumes:
+      - ./searxng-settings.yml:/etc/searxng/settings.yml:ro
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+      - DAC_OVERRIDE
+    networks:
+      - search-net
+    restart: unless-stopped
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching
+  redis:
+    image: redis:alpine
+    command: redis-server --save 30 1 --loglevel warning
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - search-net
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # Crawl4AI service for web scraping
+  crawl4ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.crawl4ai
+    container_name: crawl4ai
+    ports:
+      - "8001:8000"
+    environment:
+      - PROXY_URL=${PROXY_URL}
+      - CRAWL4AI_LOG_LEVEL=INFO
+    networks:
+      - search-net
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+
+  # Our MCP Server (orchestrates SearXNG + Crawl4AI)
+  mcp-server:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    stdin_open: true
+    ports:
+      - "3003:3003"
+    environment:
+      - SEARXNG_URL=http://searxng:8080
+      - CRAWL4AI_URL=http://crawl4ai:8000
+      - PROXY_URL=${PROXY_URL}
+      - LOG_LEVEL=info
+      - MCP_MODE=true
+    depends_on:
+      searxng:
+        condition: service_healthy
+      crawl4ai:
+        condition: service_started
+    networks:
+      - search-net
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+  # Browser UI for the backlink opportunity pipeline
+  pipeline-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.pipeline-ui
+    ports:
+      - "3004:3004"
+    environment:
+      - PIPELINE_UI_PORT=3004
+      - PIPELINE_OUTPUT_DIR=/app/data/backlink-runs
+      - SEARXNG_URL=http://searxng:8080
+      - CRAWL4AI_URL=http://crawl4ai:8000
+      - LOG_LEVEL=info
+    depends_on:
+      searxng:
+        condition: service_healthy
+      crawl4ai:
+        condition: service_started
+    networks:
+      - search-net
+    volumes:
+      - ./data/backlink-runs:/app/data/backlink-runs
+      - ./logs:/app/logs
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+networks:
+  search-net:
+    driver: bridge

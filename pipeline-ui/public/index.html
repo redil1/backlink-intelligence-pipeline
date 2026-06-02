@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Backlink Pipeline Console</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">BI</div>
+          <div>
+            <h1>Backlink Intelligence</h1>
+            <p id="healthText">Checking services</p>
+          </div>
+        </div>
+
+        <section class="panel launcher">
+          <div class="panel-title">
+            <h2>New Run</h2>
+            <span class="status-dot" id="healthDot"></span>
+          </div>
+          <form id="runForm">
+            <label>
+              Keyword
+              <input name="niche" value="watch Tv online" autocomplete="off" />
+            </label>
+            <label>
+              Run ID
+              <input name="runId" placeholder="auto" autocomplete="off" />
+            </label>
+            <div class="field-grid">
+              <label>
+                Target
+                <input name="targetCandidates" type="number" min="1" value="1000" />
+              </label>
+              <label>
+                Queries
+                <input name="maxQueries" type="number" min="1" value="150" />
+              </label>
+              <label>
+                Pages
+                <input name="searchPages" type="number" min="1" value="4" />
+              </label>
+              <label>
+                Scrape
+                <input name="scrapeLimit" type="number" min="0" value="500" />
+              </label>
+            </div>
+            <div class="field-grid">
+              <label>
+                Search workers
+                <input name="searchConcurrency" type="number" min="1" value="2" />
+              </label>
+              <label>
+                Scrape workers
+                <input name="scrapeConcurrency" type="number" min="1" value="4" />
+              </label>
+            </div>
+            <label>
+              Authority CSV
+              <input name="authorityCsv" placeholder="data/authority.csv" autocomplete="off" />
+            </label>
+            <div class="toggle-row">
+              <label class="toggle">
+                <input name="browserVerify" type="checkbox" />
+                <span></span>
+                Browser verify
+              </label>
+              <label>
+                Browser limit
+                <input name="browserLimit" type="number" min="1" value="100" />
+              </label>
+            </div>
+            <div class="button-row">
+              <button class="primary" type="submit" data-command="run">Run Full</button>
+              <button type="submit" data-command="discover">Discover</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="panel jobs-panel">
+          <div class="panel-title">
+            <h2>Jobs</h2>
+            <button class="icon-button" id="refreshJobs" title="Refresh jobs">↻</button>
+          </div>
+          <div id="jobsList" class="jobs-list"></div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <h2 id="activeRunTitle">No Run Selected</h2>
+            <p id="activeRunMeta">Select a run or start a new one.</p>
+          </div>
+          <div class="top-actions">
+            <button id="refreshAll">Refresh</button>
+            <a id="downloadCsv" class="button-link disabled" href="#">CSV</a>
+            <a id="downloadFilteredCsv" class="button-link disabled" href="#">Filtered CSV</a>
+          </div>
+        </header>
+
+        <section class="metrics" id="metrics"></section>
+
+        <section class="panel run-actions">
+          <div class="run-select">
+            <label>
+              Runs
+              <select id="runSelect"></select>
+            </label>
+          </div>
+          <div class="button-row">
+            <button id="resumeScrape">Scrape</button>
+            <button id="resumeBrowser">Browser Verify</button>
+            <button id="resumeExport">Export</button>
+          </div>
+        </section>
+
+        <nav class="tabs" aria-label="Workspace tabs">
+          <button class="tab active" data-tab="opportunities">Opportunities</button>
+          <button class="tab" data-tab="candidates">Candidates</button>
+          <button class="tab" data-tab="browser">Browser</button>
+          <button class="tab" data-tab="logs">Logs</button>
+        </nav>
+
+        <section class="panel filters" id="opportunityFilters">
+          <input id="searchFilter" placeholder="Search domain, URL, signal, risk" />
+          <select id="actionFilter">
+            <option value="">All actions</option>
+            <option value="likely_eligible">Likely eligible</option>
+            <option value="browser_verify">Browser verify</option>
+            <option value="manual_review">Manual review</option>
+            <option value="reject">Reject</option>
+          </select>
+          <select id="typeFilter">
+            <option value="">All types</option>
+            <option value="article_directory">Article directory</option>
+            <option value="social_bookmarking">Social bookmarking</option>
+            <option value="niche_directory">Niche directory</option>
+            <option value="guest_post_editorial">Guest/editorial</option>
+            <option value="community_profile">Community/profile</option>
+            <option value="resource_page">Resource page</option>
+            <option value="unknown">Unknown</option>
+          </select>
+          <select id="loginFilter">
+            <option value="">Any login</option>
+            <option value="true">Login required</option>
+            <option value="false">No login gate</option>
+          </select>
+          <select id="browserFilter">
+            <option value="">Any browser state</option>
+            <option value="verified">Verified</option>
+            <option value="failed">Failed</option>
+            <option value="unverified">Unverified</option>
+          </select>
+          <input id="minScoreFilter" type="number" min="0" max="100" value="0" />
+        </section>
+
+        <section class="table-wrap active-view" id="opportunitiesView">
+          <table>
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Domain</th>
+                <th>Type</th>
+                <th>Action</th>
+                <th>Login</th>
+                <th>Browser</th>
+                <th>Signals</th>
+              </tr>
+            </thead>
+            <tbody id="opportunitiesTable"></tbody>
+          </table>
+        </section>
+
+        <section class="table-wrap hidden" id="candidatesView">
+          <table>
+            <thead>
+              <tr>
+                <th>Score</th>
+                <th>Domain</th>
+                <th>Type</th>
+                <th>Query</th>
+                <th>Signals</th>
+              </tr>
+            </thead>
+            <tbody id="candidatesTable"></tbody>
+          </table>
+        </section>
+
+        <section class="table-wrap hidden" id="browserView">
+          <table>
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>Domain</th>
+                <th>Login</th>
+                <th>Forms</th>
+                <th>Title</th>
+              </tr>
+            </thead>
+            <tbody id="browserTable"></tbody>
+          </table>
+        </section>
+
+        <section class="panel hidden" id="logsView">
+          <pre id="jobLog" class="log-output"></pre>
+        </section>
+      </main>
+    </div>
+
+    <aside id="detailDrawer" class="drawer" aria-hidden="true">
+      <div class="drawer-head">
+        <div>
+          <h2 id="drawerTitle">Opportunity</h2>
+          <p id="drawerDomain"></p>
+        </div>
+        <button class="icon-button" id="closeDrawer" title="Close">×</button>
+      </div>
+      <div id="drawerBody" class="drawer-body"></div>
+    </aside>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
