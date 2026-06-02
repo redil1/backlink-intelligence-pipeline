@@ -94,7 +94,16 @@ const RISK_PHRASES = [
   'automatic approval',
   'unlimited links',
   'buy backlinks',
+  'buy quality backlinks',
+  'buy links',
   'paid link',
+  'paid links',
+  'paid guest post',
+  'paid guest posts',
+  'paid basis only',
+  'live links will be published on paid basis only',
+  'links will be published on paid basis only',
+  'links on paid basis',
   'link exchange',
   'reciprocal link required',
   'private blog network',
@@ -154,12 +163,31 @@ const PAYMENT_PHRASES = [
   'payment required',
   'paid submission',
   'paid listing',
+  'paid link',
+  'paid links',
+  'paid guest post',
+  'paid guest posts',
+  'paid basis only',
+  'live links will be published on paid basis only',
+  'links will be published on paid basis only',
+  'links on paid basis',
   'listing fee',
   'submission fee',
   'review fee',
   'sponsored post only',
   'sponsored post',
+  'sponsored content',
+  'advertorial',
   'advertise with us',
+  'buy backlinks',
+  'buy quality backlinks',
+  'buy links',
+  'buy links online',
+  'buy backlinks for',
+  'backlinks for $',
+  'services from $',
+  'link insertion fee',
+  'guest post fee',
   'pricing',
   'pay to submit',
   'premium listing',
@@ -794,7 +822,7 @@ export function extractLinkEvidence(scrape: ScrapeRecord, candidateDomain: strin
 
   const links = linksFromHtml.length > 0
     ? linksFromHtml
-    : (scrape.links || []).map((href) => ({ href: normalizeHref(href, scrape.url), rel: '', text: '' })).filter((link) => link.href);
+    : normalizeFallbackLinks(scrape).map((href) => ({ href: normalizeHref(href, scrape.url), rel: '', text: '' })).filter((link) => link.href);
 
   const externalLinks = links.filter((link) => {
     const domain = getDomain(link.href);
@@ -876,9 +904,44 @@ function extractPageLinks(scrape: ScrapeRecord): Array<{ href: string; rel: stri
     return linksFromHtml;
   }
 
-  return (scrape.links || [])
+  return normalizeFallbackLinks(scrape)
     .map((href) => ({ href: normalizeHref(href, scrape.url), rel: '', text: '' }))
     .filter((link) => link.href);
+}
+
+function normalizeFallbackLinks(scrape: ScrapeRecord): string[] {
+  const rawLinks = (scrape as unknown as { links?: unknown }).links;
+  if (!rawLinks) {
+    return [];
+  }
+
+  if (Array.isArray(rawLinks)) {
+    return rawLinks.flatMap((item) => linkValue(item));
+  }
+
+  if (typeof rawLinks === 'object') {
+    return Object.values(rawLinks).flatMap((value) => {
+      if (Array.isArray(value)) {
+        return value.flatMap((item) => linkValue(item));
+      }
+      return linkValue(value);
+    });
+  }
+
+  return linkValue(rawLinks);
+}
+
+function linkValue(value: unknown): string[] {
+  if (typeof value === 'string') {
+    return [value];
+  }
+
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    return ['href', 'url', 'link'].flatMap((key) => (typeof record[key] === 'string' ? [record[key] as string] : []));
+  }
+
+  return [];
 }
 
 function pathAndText(url: string, text: string): string {
