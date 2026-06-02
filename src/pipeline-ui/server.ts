@@ -249,6 +249,7 @@ function buildNewRunArgs(command: PipelineCommand, runId: string, body: Record<s
   addNumberArg(args, '--scrape-concurrency', body.scrapeConcurrency);
   addNumberArg(args, '--min-candidate-score', body.minCandidateScore);
   addNumberArg(args, '--browser-limit', body.browserLimit);
+  addNumberArg(args, '--evidence-pages', body.evidencePages);
   addStringArg(args, '--authority-csv', body.authorityCsv);
   addStringArg(args, '--browser-bu-name', body.browserBuName);
   addStringArg(args, '--browser-cdp-url', body.browserCdpUrl);
@@ -258,6 +259,12 @@ function buildNewRunArgs(command: PipelineCommand, runId: string, body: Record<s
   }
   if (body.noBrowserLocalChromium === true) {
     args.push('--no-browser-local-chromium');
+  }
+  if (body.noDeepEvidence === true) {
+    args.push('--no-deep-evidence');
+  }
+  if (body.strictMode === false) {
+    args.push('--strict-mode', 'false');
   }
   if (command === 'discover' || body.noScrape === true) {
     args.push('--no-scrape');
@@ -271,12 +278,19 @@ function buildResumeArgs(command: PipelineCommand, runDir: string, body: Record<
   addNumberArg(args, '--scrape-concurrency', body.scrapeConcurrency);
   addNumberArg(args, '--min-candidate-score', body.minCandidateScore);
   addNumberArg(args, '--browser-limit', body.browserLimit);
+  addNumberArg(args, '--evidence-pages', body.evidencePages);
   addStringArg(args, '--authority-csv', body.authorityCsv);
   addStringArg(args, '--browser-bu-name', body.browserBuName);
   addStringArg(args, '--browser-cdp-url', body.browserCdpUrl);
   addStringArg(args, '--browser-local-command', body.browserLocalCommand);
   if (body.noBrowserLocalChromium === true) {
     args.push('--no-browser-local-chromium');
+  }
+  if (body.noDeepEvidence === true) {
+    args.push('--no-deep-evidence');
+  }
+  if (body.strictMode === false) {
+    args.push('--strict-mode', 'false');
   }
   return args;
 }
@@ -422,11 +436,23 @@ function filterOpportunities(
   const browserStatus = stringQuery(query.browserStatus);
   const q = stringQuery(query.q).toLowerCase();
   const risk = stringQuery(query.risk).toLowerCase();
+  const tier = stringQuery(query.tier);
+  const minDofollow = numberQuery(query.minDofollow, 0);
+  const minAcceptance = numberQuery(query.minAcceptance, 0);
+  const minSubmission = numberQuery(query.minSubmission, 0);
+  const maxRisk = numberQuery(query.maxRisk, 100);
+  const strictDofollow = stringQuery(query.strictDofollow);
 
   const filtered = rows.filter((row) => {
     if (row.opportunityScore < minScore) return false;
     if (action && row.recommendedAction !== action) return false;
     if (type && row.opportunityType !== type) return false;
+    if (tier && row.strictEvidence?.tier !== tier) return false;
+    if ((row.strictEvidence?.dofollowConfidence || 0) < minDofollow) return false;
+    if ((row.strictEvidence?.acceptanceProbability || 0) < minAcceptance) return false;
+    if ((row.strictEvidence?.submissionPathConfidence || 0) < minSubmission) return false;
+    if ((row.strictEvidence?.riskScore || 0) > maxRisk) return false;
+    if (strictDofollow && (strictDofollow === 'true') !== Boolean(row.strictEvidence?.strictDofollow)) return false;
     if (loginRequired) {
       const required = Boolean(row.linkEvidence?.loginRequired || browserByCandidate.get(row.candidateId)?.loginRequired);
       if ((loginRequired === 'true') !== required) return false;
@@ -445,7 +471,10 @@ function filterOpportunities(
     return true;
   });
 
-  return filtered.sort((a, b) => b.opportunityScore - a.opportunityScore);
+  return filtered.sort((a, b) => {
+    const tierRank = tierWeight(b.strictEvidence?.tier) - tierWeight(a.strictEvidence?.tier);
+    return tierRank || b.opportunityScore - a.opportunityScore;
+  });
 }
 
 function paginate<T>(rows: T[], query: Record<string, unknown>): T[] {
@@ -457,16 +486,30 @@ function paginate<T>(rows: T[], query: Record<string, unknown>): T[] {
 function opportunitiesToCsv(rows: OpportunityRecord[], browserByCandidate: Map<string, BrowserVerificationRecord>): string {
   const header = [
     'score',
+    'tier',
     'recommended_action',
     'domain',
     'url',
     'type',
+    'dofollow_confidence',
+    'acceptance_probability',
+    'submission_path_confidence',
+    'strict_dofollow',
+    'risk_score',
+    'authority_score',
+    'indexability_status',
+    'payment_required',
+    'evidence_page_count',
     'login_required',
     'login_confidence',
     'browser_verified',
     'browser_login_required',
+    'proof_urls',
+    'sample_accepted_urls',
+    'sample_external_link_rel',
     'signals',
     'risks',
+    'disqualification_reasons',
   ];
   const lines = [header.join(',')];
   for (const row of rows) {
@@ -474,20 +517,42 @@ function opportunitiesToCsv(rows: OpportunityRecord[], browserByCandidate: Map<s
     lines.push(
       [
         row.opportunityScore.toFixed(2),
+        row.strictEvidence?.tier || '',
         row.recommendedAction,
         row.domain,
         row.url,
         row.opportunityType,
+        row.strictEvidence?.dofollowConfidence?.toFixed(2) || '',
+        row.strictEvidence?.acceptanceProbability?.toFixed(2) || '',
+        row.strictEvidence?.submissionPathConfidence?.toFixed(2) || '',
+        row.strictEvidence?.strictDofollow ?? '',
+        row.strictEvidence?.riskScore?.toFixed(2) || '',
+        row.authorityScore?.toFixed(2) || '',
+        row.strictEvidence?.indexabilityStatus || '',
+        row.strictEvidence?.paymentRequired ?? '',
+        row.strictEvidence?.evidencePageCount ?? '',
         row.linkEvidence?.loginRequired,
         row.linkEvidence?.loginConfidence,
         browser?.success ?? false,
         browser?.loginRequired ?? '',
+        row.strictEvidence?.proofUrls || [],
+        row.strictEvidence?.sampleAcceptedUrls || [],
+        row.strictEvidence?.sampleExternalLinkRel || [],
         row.signals,
         row.risks,
+        row.strictEvidence?.disqualificationReasons || [],
       ].map(csvEscape).join(',')
     );
   }
   return `${lines.join('\n')}\n`;
+}
+
+function tierWeight(tier?: string): number {
+  if (tier === 'tier_a') return 4;
+  if (tier === 'tier_b') return 3;
+  if (tier === 'manual_review') return 2;
+  if (tier === 'reject') return 1;
+  return 0;
 }
 
 function publicJob(job: PipelineJob) {

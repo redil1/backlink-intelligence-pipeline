@@ -13,6 +13,17 @@ export type RecommendedAction =
   | 'likely_eligible'
   | 'reject';
 
+export type OpportunityTier =
+  | 'tier_a'
+  | 'tier_b'
+  | 'manual_review'
+  | 'reject';
+
+export type IndexabilityStatus =
+  | 'indexable'
+  | 'noindex'
+  | 'unknown';
+
 export interface PipelineConfig {
   niche: string;
   targetCandidates: number;
@@ -24,6 +35,7 @@ export interface PipelineConfig {
   search: SearchConfig;
   scrape: ScrapeConfig;
   browserVerification: BrowserVerificationConfig;
+  evidence: EvidenceConfig;
   scoring: ScoringConfig;
   authority: AuthorityConfig;
 }
@@ -66,6 +78,17 @@ export interface BrowserVerificationConfig {
   concurrency: number;
   timeoutMs: number;
   minOpportunityScore: number;
+}
+
+export interface EvidenceConfig {
+  strictMode: boolean;
+  deepCrawlEnabled: boolean;
+  maxEvidencePagesPerCandidate: number;
+  minTierADofollowConfidence: number;
+  minTierAAcceptanceProbability: number;
+  minTierASubmissionPathConfidence: number;
+  minTierAAuthorityScore: number;
+  maxTierARiskScore: number;
 }
 
 export interface ScoringConfig {
@@ -171,6 +194,24 @@ export interface LinkTechnicalEvidence {
   canonicalUrl?: string;
 }
 
+export interface StrictOpportunityEvidence {
+  tier: OpportunityTier;
+  dofollowConfidence: number;
+  acceptanceProbability: number;
+  submissionPathConfidence: number;
+  riskScore: number;
+  strictDofollow: boolean;
+  indexabilityStatus: IndexabilityStatus;
+  paymentRequired: boolean;
+  paymentEvidence: string[];
+  disqualificationReasons: string[];
+  sampleAcceptedUrls: string[];
+  sampleExternalLinkRel: string[];
+  lastAcceptedDate?: string;
+  proofUrls: string[];
+  evidencePageCount: number;
+}
+
 export interface OpportunityRecord {
   candidateId: string;
   url: string;
@@ -189,6 +230,7 @@ export interface OpportunityRecord {
   risks: string[];
   evidenceSnippets: string[];
   linkEvidence: LinkTechnicalEvidence;
+  strictEvidence: StrictOpportunityEvidence;
   authority: AuthorityMetrics;
   discoveredAt: string;
   scrapedAt: string;

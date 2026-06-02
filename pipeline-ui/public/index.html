@@ -58,6 +58,10 @@
                 Scrape workers
                 <input name="scrapeConcurrency" type="number" min="1" value="4" />
               </label>
+              <label>
+                Evidence pages
+                <input name="evidencePages" type="number" min="0" value="3" />
+              </label>
             </div>
             <label>
               Authority CSV
@@ -135,6 +139,18 @@
             <option value="manual_review">Manual review</option>
             <option value="reject">Reject</option>
           </select>
+          <select id="tierFilter">
+            <option value="">All tiers</option>
+            <option value="tier_a">Tier A</option>
+            <option value="tier_b">Tier B</option>
+            <option value="manual_review">Manual review</option>
+            <option value="reject">Reject</option>
+          </select>
+          <select id="strictDofollowFilter">
+            <option value="">Any follow state</option>
+            <option value="true">Strict dofollow</option>
+            <option value="false">Not proven</option>
+          </select>
           <select id="typeFilter">
             <option value="">All types</option>
             <option value="article_directory">Article directory</option>
@@ -156,7 +172,11 @@
             <option value="failed">Failed</option>
             <option value="unverified">Unverified</option>
           </select>
-          <input id="minScoreFilter" type="number" min="0" max="100" value="0" />
+          <input id="minScoreFilter" type="number" min="0" max="100" value="0" title="Minimum score" />
+          <input id="minDofollowFilter" type="number" min="0" max="100" value="0" title="Minimum dofollow confidence" />
+          <input id="minAcceptanceFilter" type="number" min="0" max="100" value="0" title="Minimum acceptance probability" />
+          <input id="minSubmissionFilter" type="number" min="0" max="100" value="0" title="Minimum submission path confidence" />
+          <input id="maxRiskFilter" type="number" min="0" max="100" value="100" title="Maximum risk score" />
         </section>
 
         <section class="table-wrap active-view" id="opportunitiesView">
@@ -164,12 +184,15 @@
             <thead>
               <tr>
                 <th>Score</th>
+                <th>Tier</th>
                 <th>Domain</th>
                 <th>Type</th>
+                <th>Dofollow</th>
+                <th>Accept</th>
+                <th>Submit</th>
                 <th>Action</th>
                 <th>Login</th>
                 <th>Browser</th>
-                <th>Signals</th>
               </tr>
             </thead>
             <tbody id="opportunitiesTable"></tbody>

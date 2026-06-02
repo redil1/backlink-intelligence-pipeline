@@ -30,10 +30,16 @@ const el = {
 const filters = {
   q: document.querySelector('#searchFilter'),
   action: document.querySelector('#actionFilter'),
+  tier: document.querySelector('#tierFilter'),
+  strictDofollow: document.querySelector('#strictDofollowFilter'),
   type: document.querySelector('#typeFilter'),
   loginRequired: document.querySelector('#loginFilter'),
   browserStatus: document.querySelector('#browserFilter'),
   minScore: document.querySelector('#minScoreFilter'),
+  minDofollow: document.querySelector('#minDofollowFilter'),
+  minAcceptance: document.querySelector('#minAcceptanceFilter'),
+  minSubmission: document.querySelector('#minSubmissionFilter'),
+  maxRisk: document.querySelector('#maxRiskFilter'),
 };
 
 async function api(path, options = {}) {
@@ -166,7 +172,7 @@ function renderEmptyRun() {
   el.activeRunTitle.textContent = 'No Run Selected';
   el.activeRunMeta.textContent = 'Select a run or start a new one.';
   el.metrics.innerHTML = '';
-  el.opportunitiesTable.innerHTML = emptyRow('Start or select a run to inspect opportunities.', 7);
+  el.opportunitiesTable.innerHTML = emptyRow('Start or select a run to inspect opportunities.', 10);
   el.candidatesTable.innerHTML = emptyRow('Start or select a run to inspect discovered candidates.', 5);
   el.browserTable.innerHTML = emptyRow('Start or select a run to inspect browser verification evidence.', 5);
   el.downloadCsv.classList.add('disabled');
@@ -184,24 +190,28 @@ async function loadOpportunities() {
 
 function renderOpportunities(rows) {
   if (rows.length === 0) {
-    el.opportunitiesTable.innerHTML = emptyRow('No opportunities match this run and filter set.', 7);
+    el.opportunitiesTable.innerHTML = emptyRow('No opportunities match this run and filter set.', 10);
     return;
   }
   el.opportunitiesTable.innerHTML = rows.map((row, index) => {
     const loginRequired = Boolean(row.linkEvidence?.loginRequired || row.browserVerification?.loginRequired);
     const browser = row.browserVerification;
+    const strict = row.strictEvidence || {};
     return `
       <tr data-index="${index}">
         <td><span class="score">${formatScore(row.opportunityScore)}</span></td>
+        <td>${tierPill(strict.tier)}</td>
         <td class="domain-cell">
           <strong>${escapeHtml(row.domain)}</strong>
           <a href="${escapeAttr(row.url)}" target="_blank" rel="noreferrer">${escapeHtml(row.url)}</a>
         </td>
         <td>${pill(labelType(row.opportunityType))}</td>
+        <td>${scorePill(strict.dofollowConfidence, strict.strictDofollow ? 'ok' : '')}</td>
+        <td>${scorePill(strict.acceptanceProbability)}</td>
+        <td>${scorePill(strict.submissionPathConfidence)}</td>
         <td>${actionPill(row.recommendedAction)}</td>
         <td>${loginRequired ? pill('required', 'warn') : pill('open', 'ok')}</td>
         <td>${browser ? (browser.success ? pill('verified', 'ok') : pill('failed', 'danger')) : pill('pending')}</td>
-        <td>${chips((row.signals || []).slice(0, 4))}</td>
       </tr>
     `;
   }).join('');
@@ -283,6 +293,7 @@ async function runAction(action) {
     scrapeLimit: Number(document.querySelector('[name="scrapeLimit"]').value || 0),
     scrapeConcurrency: Number(document.querySelector('[name="scrapeConcurrency"]').value || 4),
     browserLimit: Number(document.querySelector('[name="browserLimit"]').value || 100),
+    evidencePages: Number(document.querySelector('[name="evidencePages"]').value || 3),
   };
   try {
     const result = await api(`/api/runs/${encodeURIComponent(state.activeRunId)}/actions`, {
@@ -298,9 +309,27 @@ async function runAction(action) {
 
 function openOpportunity(row) {
   el.drawerTitle.textContent = row.title || row.domain;
-  el.drawerDomain.textContent = `${row.domain} · ${formatScore(row.opportunityScore)} · ${row.recommendedAction}`;
+  const strict = row.strictEvidence || {};
+  el.drawerDomain.textContent = `${row.domain} · ${formatScore(row.opportunityScore)} · ${strict.tier || 'untiered'} · ${row.recommendedAction}`;
   const browser = row.browserVerification;
   el.drawerBody.innerHTML = `
+    ${detailSection('Strict Evidence', [
+      ['Tier', strict.tier],
+      ['Dofollow confidence', strict.dofollowConfidence],
+      ['Acceptance probability', strict.acceptanceProbability],
+      ['Submission path confidence', strict.submissionPathConfidence],
+      ['Strict dofollow', strict.strictDofollow],
+      ['Risk score', strict.riskScore],
+      ['Indexability', strict.indexabilityStatus],
+      ['Payment required', strict.paymentRequired],
+      ['Evidence pages', strict.evidencePageCount],
+      ['Last accepted date', strict.lastAcceptedDate],
+    ])}
+    ${detailList('Proof URLs', strict.proofUrls)}
+    ${detailList('Sample Accepted URLs', strict.sampleAcceptedUrls)}
+    ${detailList('Sample External Link Rel', strict.sampleExternalLinkRel)}
+    ${detailList('Disqualification Reasons', strict.disqualificationReasons)}
+    ${detailList('Payment Evidence', strict.paymentEvidence)}
     ${detailSection('Link Evidence', [
       ['Submission form', row.linkEvidence?.hasSubmissionForm],
       ['Login required', row.linkEvidence?.loginRequired],
@@ -364,7 +393,7 @@ function formPayload(form) {
   for (const [key, value] of data.entries()) {
     payload[key] = value;
   }
-  for (const key of ['targetCandidates', 'maxQueries', 'searchPages', 'searchConcurrency', 'scrapeLimit', 'scrapeConcurrency', 'browserLimit']) {
+  for (const key of ['targetCandidates', 'maxQueries', 'searchPages', 'searchConcurrency', 'scrapeLimit', 'scrapeConcurrency', 'browserLimit', 'evidencePages']) {
     payload[key] = Number(payload[key] || 0);
   }
   payload.browserVerify = Boolean(data.get('browserVerify'));
@@ -415,6 +444,15 @@ function pill(text, tone = '') {
 function actionPill(action) {
   const tone = action === 'reject' ? 'danger' : action === 'likely_eligible' ? 'ok' : action === 'browser_verify' ? 'warn' : '';
   return pill(action, tone);
+}
+
+function tierPill(tier) {
+  const tone = tier === 'tier_a' ? 'ok' : tier === 'tier_b' ? 'warn' : tier === 'reject' ? 'danger' : '';
+  return pill(labelType(tier || 'unknown'), tone);
+}
+
+function scorePill(value, tone = '') {
+  return pill(formatScore(value), tone || (Number(value || 0) >= 80 ? 'ok' : Number(value || 0) >= 55 ? 'warn' : ''));
 }
 
 function statusPill(status) {

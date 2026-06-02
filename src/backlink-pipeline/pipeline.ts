@@ -7,7 +7,7 @@ import type {
   SearchQueryRecord,
 } from './types.js';
 import { AuthorityProvider } from './authority.js';
-import { buildCandidate, analyzeScrape } from './classifier.js';
+import { buildCandidate, analyzeScrape, selectEvidenceUrls } from './classifier.js';
 import { Crawl4AIHttpClient, SearxngSearchClient } from './clients.js';
 import { generateSearchQueries } from './config.js';
 import { BrowserHarnessVerifier } from './browser-harness.js';
@@ -257,13 +257,53 @@ export class BacklinkOpportunityPipeline {
       return;
     }
 
+    const evidenceScrapes = await this.scrapeEvidencePages(candidate, scrape);
     const authority = this.authorityProvider.getAuthority(
       candidate,
       this.domainOccurrences.get(candidate.domain) || 1
     );
-    const opportunity = analyzeScrape(this.config, candidate, scrape, authority);
+    const opportunity = analyzeScrape(this.config, candidate, scrape, authority, evidenceScrapes);
     await this.store.appendOpportunity(opportunity);
     this.summary.opportunities += 1;
+  }
+
+  private async scrapeEvidencePages(candidate: CandidateRecord, scrape: ScrapeRecord): Promise<ScrapeRecord[]> {
+    if (!this.config.evidence.deepCrawlEnabled || this.config.evidence.maxEvidencePagesPerCandidate <= 0) {
+      return [];
+    }
+
+    const urls = selectEvidenceUrls(candidate, scrape, this.config.evidence.maxEvidencePagesPerCandidate);
+    const evidenceScrapes: ScrapeRecord[] = [];
+    for (const [index, url] of urls.entries()) {
+      const evidenceScrape = await retry(
+        () =>
+          this.crawlClient.scrape({
+            candidateId: `${candidate.id}:evidence:${index + 1}`,
+            url,
+            domain: candidate.domain,
+            formats: this.config.scrape.formats,
+            timeoutMs: Math.min(this.config.scrape.timeoutMs, 20000),
+          }),
+        0,
+        `Crawl4AI evidence scrape ${url}`,
+        1000
+      ).catch((error) => ({
+        candidateId: `${candidate.id}:evidence:${index + 1}`,
+        url,
+        domain: candidate.domain,
+        success: false,
+        scrapedAt: nowIso(),
+        links: [],
+        metadata: {},
+        error: formatError(error),
+      }));
+
+      if (evidenceScrape.success) {
+        evidenceScrapes.push(evidenceScrape);
+      }
+    }
+
+    return evidenceScrapes;
   }
 
   private async selectTopOpportunities(limit: number, minScore: number): Promise<OpportunityRecord[]> {

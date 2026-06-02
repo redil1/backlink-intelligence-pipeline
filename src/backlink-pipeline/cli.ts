@@ -163,6 +163,24 @@ function parseArgs(argv: string[]): ParsedArgs {
       case 'min-export-score':
         overrides.scoring = { ...(overrides.scoring || {}), minExportScore: Number(value) } as PipelineConfig['scoring'];
         break;
+      case 'evidence-pages':
+        overrides.evidence = {
+          ...(overrides.evidence || {}),
+          maxEvidencePagesPerCandidate: Number(value),
+        } as PipelineConfig['evidence'];
+        break;
+      case 'no-deep-evidence':
+        overrides.evidence = {
+          ...(overrides.evidence || {}),
+          deepCrawlEnabled: false,
+        } as PipelineConfig['evidence'];
+        break;
+      case 'strict-mode':
+        overrides.evidence = {
+          ...(overrides.evidence || {}),
+          strictMode: value === 'true' || value === '1',
+        } as PipelineConfig['evidence'];
+        break;
       default:
         throw new Error(`Unknown option: --${key}`);
     }
@@ -210,6 +228,9 @@ Important options:
   --scrape-limit <number>       scrape budget for this run
   --scrape-concurrency <n>      Crawl4AI concurrency
   --authority-csv <file>        CSV with domain,authority_score columns
+  --evidence-pages <number>     same-domain submission/guideline/sample pages to inspect per candidate
+  --no-deep-evidence            score only the initially discovered page
+  --strict-mode false           keep legacy blended score instead of strict evidence-weighted score
   --browser-verify true         enable browser-harness during run
   --browser-limit <number>      browser verification budget
   --browser-bu-name <name>      Browser Harness daemon namespace
