@@ -2,34 +2,35 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-# Install dependencies for Playwright
 RUN apk add --no-cache \
-    chromium \
-    nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
+    bash \
     ca-certificates \
+    chromium \
+    freetype \
+    git \
+    harfbuzz \
+    nss \
+    py3-pip \
+    python3 \
     ttf-freefont
 
-# Set Playwright to use system chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PATH="/root/.local/bin:${PATH}"
 
-# Copy package files
+RUN python3 -m pip install --break-system-packages uv \
+    && uv tool install git+https://github.com/browser-use/browser-harness.git
+
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy source code
 COPY . .
-
-# Build the application
+RUN cp scripts/browser-harness-local-chromium.sh /usr/local/bin/browser-harness-local-chromium \
+    && chmod +x /usr/local/bin/browser-harness-local-chromium
 RUN npm run build
 
-# Expose port for MCP server
+EXPOSE 3000
 EXPOSE 3003
+EXPOSE 3004
 
-# Start the self-hosted SearXNG + Crawl4AI MCP server
-CMD ["node", "fixed-mcp-server.js"]
+CMD ["node", "dist/pipeline-ui/server.js"]

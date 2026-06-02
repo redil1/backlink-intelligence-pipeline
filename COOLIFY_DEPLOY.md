@@ -1,6 +1,8 @@
 # Coolify Deployment
 
-This project can be deployed as a Docker Compose application in Coolify.
+This project can be deployed in Coolify either as a Docker Compose resource or as a single Dockerfile application.
+
+Docker Compose is the recommended end-to-end mode because it starts SearXNG, Crawl4AI, Redis, the MCP server, and the pipeline UI together.
 
 ## Services
 
@@ -11,6 +13,8 @@ This project can be deployed as a Docker Compose application in Coolify.
 - `mcp-server` - optional MCP service
 
 ## Coolify Setup
+
+### Recommended: Docker Compose Resource
 
 1. Create a new Coolify resource from the GitHub repository.
 2. Select Docker Compose deployment.
@@ -53,3 +57,17 @@ http://YOUR_DOMAIN_OR_IP:3004
 - Results are written to `data/backlink-runs`.
 - Do not browser-verify every candidate at very large scale. Use browser verification for top-scored or ambiguous targets.
 - Large-scale discovery may be throttled by upstream search engines unless proxies or paid search APIs are used.
+
+### Fallback: Dockerfile Application
+
+If Coolify is configured as a normal application instead of a Docker Compose resource, it will route traffic to `PORT=3000`. The default `Dockerfile` supports that mode and starts the pipeline UI.
+
+For full pipeline runs in single-application mode, configure reachable service URLs:
+
+```env
+SEARXNG_URL=http://your-searxng-host:8080
+CRAWL4AI_URL=http://your-crawl4ai-host:8000
+PIPELINE_OUTPUT_DIR=/app/data/backlink-runs
+```
+
+Single-application mode is useful for the dashboard, but Docker Compose mode is still the correct end-to-end installation.

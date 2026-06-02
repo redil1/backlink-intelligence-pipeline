@@ -35,7 +35,7 @@ interface PipelineJob {
 }
 
 const app = express();
-const port = Number(process.env.PIPELINE_UI_PORT || 3004);
+const port = Number(process.env.PIPELINE_UI_PORT || process.env.PORT || 3004);
 const projectRoot = process.cwd();
 const outputDir = path.resolve(process.env.PIPELINE_OUTPUT_DIR || 'data/backlink-runs');
 const publicDir = path.resolve(projectRoot, 'pipeline-ui/public');

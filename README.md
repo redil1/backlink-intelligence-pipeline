@@ -76,7 +76,7 @@ For Docker:
 docker compose up -d --build pipeline-ui
 ```
 
-See [BACKLINK_PIPELINE.md](BACKLINK_PIPELINE.md) for the full architecture, scaling guide, UI workflow, Docker workflow, resume behavior, authority CSV import, and Browser Harness verification flow. See [COOLIFY_DEPLOY.md](COOLIFY_DEPLOY.md) for VPS/Coolify deployment.
+See [BACKLINK_PIPELINE.md](BACKLINK_PIPELINE.md) for the full architecture, scaling guide, UI workflow, Docker workflow, resume behavior, authority CSV import, and Browser Harness verification flow. See [COOLIFY_DEPLOY.md](COOLIFY_DEPLOY.md) for VPS/Coolify deployment, including the recommended Docker Compose mode and the fallback Dockerfile application mode.
 
 ## 🚀 **Quick Start**
 
