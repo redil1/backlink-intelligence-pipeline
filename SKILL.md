@@ -28,6 +28,8 @@ Do not use `dist/index.js` for normal self-hosted scraping. That original entryp
 
 The same workspace also includes a backlink opportunity intelligence pipeline. Use it when the user asks to discover, scrape, score, validate, or export backlink opportunities from article directories, social bookmarking sites, niche directories, resource pages, editorial submission pages, or community/profile pages.
 
+For the user's backlink-creation goal, discovery and CSV export are incomplete by themselves. A complete campaign must continue through content creation, authorized publishing, and live backlink verification.
+
 ```bash
 npm run pipeline -- run --niche "cybersecurity" --target 10000 --scrape-limit 10000
 ```

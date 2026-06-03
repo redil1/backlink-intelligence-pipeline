@@ -11,7 +11,13 @@ Use this skill when working with the production backlink opportunity pipeline in
 /root/backlinks/searxng-crawl4ai-mcp-master
 ```
 
-The pipeline is an intelligence and verification system. It discovers public backlink opportunities, scrapes candidate pages, extracts technical evidence, scores opportunity quality, and exports review queues. It does not submit content, create accounts, place links, or bypass access controls.
+The pipeline is an intelligence and verification system. It discovers public backlink opportunities, scrapes candidate pages, extracts technical evidence, scores opportunity quality, and exports review queues. By itself, this is not a complete backlink-creation pipeline for the user's goal, because a complete campaign must also create content, publish on owned or explicitly authorized destinations, and verify a live backlink.
+
+This skill does not submit content, create accounts, place links, or bypass access controls. When the user wants actual backlink creation instead of only opportunity intelligence, hand off to:
+
+```text
+skills/backlink-content-publishing-agent/SKILL.md
+```
 
 ## System Map
 

@@ -9,6 +9,8 @@ Use this skill when the user wants an agent to move from backlink opportunity di
 
 This skill extends the local backlink opportunity pipeline. It does not replace it.
 
+For this user's backlink goal, a pipeline that stops at discovery, scraping, scoring, or CSV export is incomplete. A complete backlink pipeline must continue until it has attempted authorized publication, produced at least one live published URL when credentials/permission allow it, and verified whether the backlink exists and is dofollow.
+
 Pipeline root:
 
 ```text
@@ -20,6 +22,20 @@ Primary pipeline skill:
 ```text
 skills/backlink-opportunity-pipeline/SKILL.md
 ```
+
+## Completion Requirement
+
+The agent's default target is not only a list of opportunities. The default target is a verified backlink outcome.
+
+A run is complete only when one of these states is reached:
+
+- `verified_backlink`: a live URL was published or accepted, the backlink to the promoted site exists, and the link was verified.
+- `published_needs_recheck`: content was published to an authorized destination, but the backlink or indexability needs delayed rechecking.
+- `submission_packet_ready`: a third-party destination was suitable, but publication requires user approval, credentials, payment approval, or manual submission.
+- `blocked_missing_authorization`: no owned or explicitly authorized destination was available for publishing.
+- `blocked_site_rules`: the target site's rules, payment requirement, login gate, CAPTCHA, or link policy prevent responsible publication.
+
+The agent must not treat `opportunities.csv` as the final deliverable for this skill. It must either publish and verify, or clearly report the exact blocker preventing publication.
 
 ## Operating Boundary
 
@@ -33,7 +49,7 @@ The agent may automate:
 - Verifying published URLs and backlink attributes after publication.
 - Producing a final report with evidence and next actions.
 
-The agent must not blindly publish to third-party websites. For third-party opportunities, it must prepare a submission packet and require user approval before any submission attempt. It must also follow each target site's rules.
+The user has explicitly required publishing and backlink creation as the end goal. The agent should therefore publish automatically to owned or explicitly authorized destinations when the needed access is available. For third-party opportunities, it must not blindly publish; it must confirm destination-specific permission, prepare a submission packet when permission is not already clear, and follow each target site's rules.
 
 Hard stops:
 
@@ -56,6 +72,7 @@ For each campaign, the user should receive:
 - Publishable drafts.
 - Submission packets for third-party sites.
 - Published URLs for owned or explicitly authorized destinations.
+- At least one verified live backlink when an authorized publish path exists.
 - Verification records showing the backlink target, anchor, link `rel`, dofollow status, indexability, and screenshots or extracted evidence when available.
 - A final campaign report.
 
@@ -96,7 +113,7 @@ Publishing permission examples:
 - Owned static site repository where the agent may add posts and deploy.
 - Explicitly approved third-party submission page for one specific post.
 
-If publishing permissions are missing, the agent may still create drafts and submission packets, but it must not submit or publish.
+If publishing permissions are missing, the agent may still create drafts and submission packets, but it must not submit or publish. In that case it must mark the run as `blocked_missing_authorization`, because the campaign is not complete until publishing and verification happen.
 
 ## Step 1: Prepare The Local Stack
 
