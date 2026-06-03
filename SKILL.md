@@ -40,6 +40,12 @@ For a dedicated pipeline operating skill, read:
 skills/backlink-opportunity-pipeline/SKILL.md
 ```
 
+For the supervised content creation, approved publishing, and backlink verification layer, read:
+
+```text
+skills/backlink-content-publishing-agent/SKILL.md
+```
+
 ## Core Workflow
 
 1. Go to the install directory:
